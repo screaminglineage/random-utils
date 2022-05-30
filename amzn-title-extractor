@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Amazon Title Extractor
+# Takes in an Amazon product link and prints the product name
+
+
+# Shows information about this command
+help() {
+    echo "usage: amzn-title-extractor [-h] [amazon_link]"
+    echo ""
+    echo "Gets Product Title from Amazon link"
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+}
+
+
+# Bunch of string parsing to get the title
+# Can stop working at any time due to changes at Amazon's side
+main() {
+    wget --quiet --output-document=- "$1" 2> /dev/null >&1 |
+        grep 'jQuery.parseJSON' |
+            awk -v FS="(')" '{print $2}' |
+                jq '.title' |
+                # '#' is used within sed as a separator instead of '/' to avoid confusing with the '\' in it
+                    sed -e 's#\"##g' -e "s#&quot;#\"#g" -e "s#&amp;#\&#g" -e "s#&trade;#™#g" \
+                        -e 's#\\##g'
+}
+
+
+
+# Displays help and checks if link is entered
+if [[ $1 == "-h" ]] || [[ $1 = '--help' ]]; then
+    help
+
+elif [[ -z $1 ]]; then
+        echo "Error! No amazon product link found"
+
+else
+    main "$1"
+fi
+
+
+###################
+# Alternate method
+##############################################################
+# wget --quiet --output-document=- $link 2> /dev/null >&1 |
+#     grep -A 10 "productTitle" |
+#         sed -re '/^$/d' |
+#             awk 'NR==2' |
+#                 sed -e "s/&#34;/\"/g" -e "s#&amp;#\&#g"
+
+##############################################################

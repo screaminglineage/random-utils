@@ -1,0 +1,52 @@
+#!/bin/bash
+# Prints out the CPU Core Temperatures
+
+# Shows information about this command
+help() {
+    echo "usage: cputemp [-h] [-i interval]"
+    echo ""
+    echo "Prints out the CPU Core Temperatures"
+    echo ""
+    echo "positional arguments:"
+    echo ""
+    echo "options:"
+    echo "  -h, --help       show this help message and exit"
+    echo "  -i interval      interval to refresh temperatures (in seconds) (DEFAULT: 5})"
+}
+
+
+runner () {
+    while true; do
+        clear
+        echo "CPU TEMPERATURES"
+        echo "----------------"
+        main
+        echo "----------------"
+        echo -en "\nPress 'q' to exit"
+        read -rsn1 -t "$1" key              # Waits for 'q' to be pressed until the interval is up
+        if [[ $key == "q" ]]; then
+            exit 0
+        fi
+    done
+}
+
+
+main () {
+    sensors \
+        | grep "high" \
+        | awk '$1 == "Package" {printf("%s\t%s\n", "Total:", $4)} \
+               $1 == "Core" {printf("%s %s\t%s\n", $1, $2, $3)}' \
+        | sed "s/+//g"
+}
+
+# Shows help and exits if the argument is -h
+if [[ $1 = -h ]] || [[ $1 = --help ]]; then
+    help
+    exit 0
+# Sets refresh interval
+elif [[ $1 == "-i" ]]; then
+    interval=$2
+else
+    interval=5
+fi
+runner "$interval"

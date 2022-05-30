@@ -1,0 +1,26 @@
+#!/usr/bin/bash
+# Boots into Windows
+# Requires sudo priviledges
+
+# Shows information about this command
+help() {
+    echo "usage: sudo winboot [-h]"
+    echo ""
+    echo "Boot into Windows"
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+}
+
+# Shows help and exits if the argument is '-h'
+if [[ $1 = '-h' ]] || [[ $1 = '--help' ]]; then
+    help
+    exit 0
+elif [[ $EUID -ne 0 ]]; then
+    echo "Error! Not Running with Root Priviledges."  
+    exit 1
+fi
+
+grub-reboot 'Windows Boot Manager (on /dev/sda1)'
+reboot
+

@@ -1,0 +1,57 @@
+#!/usr/bin/bash
+# Random Face Generator (Powered by https://thispersondoesnotexist.com)
+
+
+# Shows information about this command
+help() {
+    echo "usage: facegen [-h] [-n] [number_of_images] [-d] [save_directory]"
+    echo ""
+    echo "Random Face Generator (Powered by https://thispersondoesnotexist.com)"
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+    echo "  -n          select number of images (DEFAULT: 5)"
+    echo "  -d          select directory to save (DEFAULT: Current)"
+}
+
+
+main() {
+    # This is wayyy faster than the "normal" way of doing somehow
+    # (Takes about 17-19 secs for 10 pics)
+    for i in $(seq 1 "$number"); do
+        echo "https://thispersondoesnotexist.com/image" >> url.txt
+    done
+
+    echo "Downloading..."
+}
+
+
+# Checking for flags set at runtime
+help_flag=''
+directory_flag=''
+number=5
+
+while getopts 'hn:d:' flag; do
+    case $flag in
+        h) help; exit 0 ;;
+        d) directory=${OPTARG} ;;
+        n) number=${OPTARG} ;;
+    esac
+done
+
+
+main "$number"
+
+# No directory specified
+if [[ -z directory_flag ]]; then
+    wget --quiet --input-file=url.txt
+
+# Specific directory set
+else
+    wget --quiet --input-file=url.txt --directory-prefix="$directory"
+fi
+
+
+
+rm url.txt              # Deletes file to prevent adding more lines to it next time
+echo "Done!"

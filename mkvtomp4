@@ -1,0 +1,44 @@
+#!/bin/bash
+# Converts all the mkv files in the current directory into MP4 without reencoding
+# Output Directory can be set as a parameter (will be created if it doesnt exist) 
+
+
+# Shows information about this command
+help() {
+    echo "usage: mkvtomp4 [-h] [output_directory] "
+    echo ""
+    echo "Converts all the MKV files in the current directory into MP4 without rencoding"
+    echo ""
+    echo "positional arguments:"
+    echo "  output_directory      directory name to output MP4 files (will be created if doesnt exist)\
+                                 (DEFAULT: \"output\")"
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+}
+
+
+# Shows help and exits if the argument is -h
+if [[ $1 = -h ]] || [[ $1 = --help ]]; then
+    help
+    exit 0
+fi
+
+
+main() {
+    if [[ "$1" == '' ]]; then
+        output_dir="output"
+    else
+        output_dir="$1"
+    fi
+    mkdir "$output_dir"
+
+    path="$(pwd)"
+    for file in "${path}"/*.mkv; do
+        title=$(basename -s .mkv "$file")
+        ffmpeg -i "$file" -codec copy -strict -2 "${path}/${output_dir}/${title}.mp4"
+    done
+}
+
+
+main "$1"

@@ -1,0 +1,45 @@
+#!/bin/bash
+# Uses KDE Connect CLI to get phone battery percentage and notifies when charging is finished
+
+
+DEVICE_ID="$1"
+CHARGE_VALUE=78
+
+
+# Shows information about this command
+help() {
+    echo "usage: charge-notify [-h] "
+    echo ""
+    echo "Notifies when linked phone is charged upto a certain value"
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+}
+
+
+# Shows help and exits if the argument is -h
+if [[ $1 = -h ]] || [[ $1 = --help ]]; then
+    help
+    exit 0
+fi
+
+# Main function
+main() {
+    while true; do
+        # KDE Connect CLI command to get battery percentage
+        perc=$(qdbus org.kde.kdeconnect /modules/kdeconnect/devices/${DEVICE_ID}/battery org.kde.kdeconnect.device.battery.charge)
+
+        if [[ $perc -gt $CHARGE_VALUE ]]; then
+            notify-send --urgency=critical "Charged!"
+            break
+        fi
+        sleep 300
+done
+}
+
+main
+
+
+
+
+

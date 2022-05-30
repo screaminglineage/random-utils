@@ -1,0 +1,57 @@
+#!/bin/bash
+# Fixes a read-only NTFS file system caused due to booting Linux while Windows is in hibernation mode
+# Requires sudo priviledges
+
+
+
+# Shows information about this command
+help() {
+    echo "usage: sudo auto-ntfsfix [-h]"
+    echo ""
+    echo "Fixes a read-only NTFS file system caused due to booting Linux while Windows is in hibernation mode"
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+}
+
+
+# Main function
+main() {
+    sudo umount "$1" 2> /dev/null
+
+    errcheck=$?
+
+    if [[ $errcheck != 0 ]]; then
+        echo "Error! Mount Failed."
+        if [[ $errcheck == 32 ]]; then
+            echo "File(s) on target in use. Please close them and retry."
+        fi
+
+    else
+        sudo ntfsfix "$1"
+        sudo mount -a
+    fi
+}
+
+
+
+# Displays the help options
+if [[ $1 = '-h' ]] || [[ $1 = '--help' ]]; then
+    help
+    exit 0
+else
+    main "/dev/sda3"
+    main "/dev/sda4"
+    main "/dev/sda5"
+fi
+
+
+
+
+
+
+
+
+
+
+
