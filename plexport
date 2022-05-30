@@ -1,0 +1,184 @@
+#!/usr/bin/python
+# Exports the Video IDs and Titles from a playlist to a text file
+# Doesnt work for Privated Playlists
+#
+# SYNTAX -- 'plexport [Playlist_URL]' or 'plexport [Playlist_ID]'
+# Eg. -- "plexport https://www.youtube.com/playlist?list=PLtcJBMFw-xBStidirECURLKs9-AtPE57D" (without quotes) will export the playlist
+# Eg. -- "plexport PLtcJBMFw-xBStidirECURLKs9-AtPE57D" (without quotes) will also work with only the playlist id
+# Also has a few special playlists saved with acronyms for convenience
+
+import subprocess
+import argparse
+from googleapiclient.discovery import build
+
+
+# Default Values
+API_KEY_FILE = "files/api_key.txt"
+EXPORT_PATH = '.'
+
+# Add frequently used playlists below for easy exporting
+# Example
+"""pl_list = {
+           'Banger Beats':'PLEO1OsPKpmZFlWmAlfg9tPDVc2TsMIxfC',
+           'Soothing Songs': 'PLEO1OsPKpmZGn4UKR6qvIChidbCpZZwm_'
+           }
+"""
+
+pl_list = {
+        'Playlist Name':'Playlist ID',
+        'Playlist 2 Name':'Playlist ID'
+        }
+
+
+# Main Function
+def main(playlist_id, export_path):
+    # Gets the contentDetails part of the info for the given playlist ID
+    # Used to get the name of the playlist
+    pl_request = youtube.playlists().list(
+        part='snippet',
+        id=playlist_id
+    )
+    # Executes the request
+    pl_response = pl_request.execute()
+    pl_title = pl_response['items'][0]['snippet']['title']      # Stores Playlist name
+
+
+    vid_ids_all = []            # Stores video IDs
+    vid_titles_all = []         # Stores video titles
+    nextPageToken = None        # nextPageToken for API (can only display 50 max results at once)
+    while True:
+        # Gets the contentDetails part of the info for the given playlist ID
+        # Used to get the video IDs of all videos in the playlist
+        pl_request = youtube.playlistItems().list(
+            part='contentDetails',
+            playlistId=playlist_id,
+            maxResults=50,
+            pageToken=nextPageToken
+        )
+        # Executes the request
+        pl_response = pl_request.execute()
+
+        vid_ids = []                                            # Stores the video IDs for 1 iteration (1 page of results)
+
+        # Iterates through the results and appends the video ids to the vid_id list
+        for item in pl_response['items']:
+            vid_ids.append(item['contentDetails']['videoId'])
+        vid_ids_all += vid_ids                                  # Stores all the IDs from every page of the results
+
+        # Gets the snippet part of the info for given video IDs which is
+        # taken by joining the vid_ids list into a comma separated string
+        vid_request = youtube.videos().list(
+            part='snippet',
+            id=','.join(vid_ids)
+        )
+
+        # Executes the request
+        vid_response = vid_request.execute()
+
+        vid_titles = []                                         # Stores the video IDs for 1 iteration (1 page of results)
+
+        # Iterates through the results and appends the video titles to the vid_titles list
+        for item in vid_response['items']:
+            vid_titles.append(item['snippet']['title'])
+        vid_titles_all += vid_titles                            # Stores all the titles from every page of the results
+
+        # Gets the nextPageToken from the response obtained with the playlist ID
+        # Breaks out of the loop if the nextPageToken is None (Last page of results reached)
+        nextPageToken = pl_response.get('nextPageToken')
+        if not nextPageToken:
+            break
+
+    ############################################################################
+    ## OPTION 1                                                               ##
+    ## Export in Dictionary with keys as Video IDs and values as Video Titles ##
+    ## Can be later printed in a file                                         ##
+    ############################################################################
+    # Results = {}
+    # for i in range(len(vid_ids)):
+    #     Results[vid_ids[i]] = vid_titles[i]
+    # print(Results)
+
+    ##########################################################################
+    ## OPTION 2                                                             ##
+    ## Export in text file with hyphen-separated Video Titles and Video IDs ##
+    ##########################################################################
+
+    # Change the file path below to set the export location
+    with open(f'{export_path}/{pl_title}.txt', 'w') as fout:
+        for i in range(len(vid_titles_all)):
+            title = vid_titles_all[i].strip()
+            id = vid_ids_all[i].strip()
+            fout.write(f'{title}  ---  {id}\n')
+
+
+def execute():
+    # If an invalid playlist is entered than an IndexError is raised by the main
+    # function. This shows the proper error message when that occurs
+    print('Working...')
+    try:
+        main(id, args.path)
+        print('Done!')
+    except IndexError:
+        print('Error! Invalid Playlist Entered.')
+
+
+# Argparse Options
+parser = argparse.ArgumentParser(
+    description='Export the video titles and IDs from a playlist into a text file')
+
+# Gets Command Line Arguments
+parser.add_argument('playlist_name', type=str, nargs='?',
+                    help='name of playlist')
+
+parser.add_argument('-u', '--url', type=str, help='playlist URL')
+
+parser.add_argument('-i', '--id', type=str, help='playlist ID')
+
+parser.add_argument('-a', '--all', action='store_true',
+                    help='export all playlists')
+
+parser.add_argument('-p', '--path', type=str,
+                    default = EXPORT_PATH,
+                    help='path to save exported playlist')
+
+args = parser.parse_args()
+
+
+
+# Getting API Token from file
+try:
+    with open(API_KEY_FILE, 'r') as api_file:
+        api_key = api_file.read().strip()
+except FileNotFoundError:
+        print("No API Key file found")
+        exit(1)
+
+youtube = build('youtube', 'v3', developerKey=api_key)
+
+
+# Removes part of the url to get only the video ID
+if args.url:
+    id = args.url[38:]
+    execute()
+
+if args.id:
+    id = args.id
+    execute()
+
+# Goes through all the saved frequently used playlists and exports them
+if args.all:
+    for id in pl_list.values():
+        execute()
+
+# Add shortcuts for playlists saved above 
+if args.playlist_name == '1':
+    id = pl_list['Playlist Name']
+    execute()
+elif args.playlist_name == '2':
+    id = pl_list['Playlist 2 Name']
+    execute()
+
+
+
+
+
