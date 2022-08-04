@@ -1,0 +1,36 @@
+#!/bin/bash
+# Extract the text from the image in a rectangular region and display it 
+# Dependencies: 
+#   imagemagick (for taking a screenshot)
+#   tesseract (OCR tool)
+
+
+# Shows information about this command
+help() {
+    echo "usage: screenshot_ocr [-h] "
+    echo ""
+    echo "Takes a screenshot of a rectangular region and then applies OCR on it"
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+}
+
+
+main() {
+    import test.png \
+        && tesseract test.png /tmp/out \
+        && rm test.png
+
+    zenity --width=640 --height=480 --text-info --filename=/tmp/out.txt
+    rm /tmp/out.txt
+}
+
+
+# Shows help and exits if the argument is -h
+if [[ $1 = -h ]] || [[ $1 = --help ]]; then
+    help
+    exit 0
+else
+    main
+fi
+
