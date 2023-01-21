@@ -191,6 +191,9 @@ def cli_parser():
     parser.add_argument('-p', '--path', type=str,
                         default=EXPORT_PATH,
                         help='path to save exported playlist')
+
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='force export playlist even when removed videos are present')
     
     return parser
 
@@ -220,23 +223,26 @@ def main():
         else:
             print('Error! Invalid Playlist Entered.')
             return 1
-        export_playlist(SAVED_PLAYLISTS[saved_playlist], saved_playlist, export_path=args.path)
-
+        export_playlist(SAVED_PLAYLISTS[saved_playlist], saved_playlist, 
+                        export_path=args.path, check_diff=(not args.force))
     
     # Goes through all the saved frequently used playlists and exports them
     if args.all:
         for pl_title, pl_id in SAVED_PLAYLISTS.items():
-            export_playlist(pl_id, pl_title, args.path)
+            export_playlist(pl_id, pl_title, args.path, 
+                            check_diff=(not args.force))
     
     # Removes part of the url to get only the video ID
     if args.url:
         for url in args.url:
             playlist = url[38:]
-            export_playlist(playlist, export_path=args.path)
+            export_playlist(playlist, export_path=args.path, 
+                            check_diff=(not args.force))
 
     if args.id:
         for playlist in args.id:
-            export_playlist(playlist, export_path=args.path)
+            export_playlist(playlist, export_path=args.path, 
+                            check_diff=(not args.force))
 
 
 if __name__ == "__main__":
