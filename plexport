@@ -8,12 +8,14 @@
 # Also has a few special playlists saved with acronyms for convenience
 
 import sys
+import os
 import argparse
+import difflib
 from googleapiclient.discovery import build
 
-# Default Values
-API_KEY_FILE = "files/api_key.txt"
-EXPORT_PATH = '.'
+API_KEY = 'AIzaSyAJ0FuPhTk7JptUUsNMmRYgwnu8UbARaDE'
+EXPORT_PATH = '/mnt/Other-Stuff/Playlist Backup/'
+youtube = build('youtube', 'v3', developerKey=API_KEY)
 
 # Frequently used playlists saved for ease of use
 SAVED_PLAYLISTS = {
@@ -22,18 +24,31 @@ SAVED_PLAYLISTS = {
     'Techno Tempo': 'PLEO1OsPKpmZEDc4PLpzl9g5bsn49LqnFw'
 }
 
+
 # Stores playlist video titles and their IDs
 class Playlist:
     def __init__(self, vid_titles_list, ids_list):
         self.vids = vid_titles_list
         self.ids = ids_list
+    
+    def to_list(self):
+        videos = []
+        for vid, vid_id in zip(self.vids, self.ids):
+            videos.append(f'{vid.strip()}  ---  {vid_id.strip()}\n')
+        return videos
+
 
 # Error in finding playlist. Usually caused by entering an invalid playlist
 class PlaylistNotFoundError(Exception):
     pass
 
 
-# Checks if the requested playlist exits and can be accessed
+# Videos removed from playlist
+class PlaylistVideosRemovedError(Exception):
+    pass
+
+
+# Checks if the requested playlist exists and can be accessed
 def check_response(response):
     results = response['pageInfo']['totalResults']
     if results < 1:
@@ -97,6 +112,21 @@ def get_playlist_data(playlist_id):
     return Playlist(vid_titles_all, vid_ids_all)
 
 
+def diff_files(old_file_contents, new_file_contents):
+    diff = difflib.unified_diff(old_file_contents, new_file_contents, n=0, lineterm="")
+    
+    deletions = set()
+    additions = set()
+    for line in diff:
+        if line.startswith("-") and not line.startswith("---"):
+            deletions.add(line[1:].strip())
+
+        elif line.startswith("+") and not line.startswith("+++"):
+            additions.add(line[1:].strip())
+
+    return deletions.difference(additions)
+                
+
 def write_to_file(title, playlist, export_path):
     with open(f'{export_path}/{title}.txt', 'w') as file:
         length = len(playlist.vids)
@@ -106,9 +136,9 @@ def write_to_file(title, playlist, export_path):
             file.write(f'{title}  ---  {pl_id}\n')
 
 
-def export_playlist(playlist_id, title=None, export_path=EXPORT_PATH):
+def export_playlist(playlist_id, title=None, export_path=EXPORT_PATH, check_diff=True):
     # If an invalid playlist is entered then a PlaylistNotFoundError
-    # is raised. Shows an error message and quits if so.
+    # is raised which displays an error message for that playlist
     try:
         # Gets the title if not provided
         if title is None:
@@ -116,11 +146,30 @@ def export_playlist(playlist_id, title=None, export_path=EXPORT_PATH):
         print(f" - Exporting {title}")
         
         data = get_playlist_data(playlist_id)
+        filepath = f'{export_path}/{title}.txt'
+
+        # Diffs the new and old files to check if any videos have been removed
+        if check_diff and os.path.exists(filepath):
+            with open(filepath, 'r') as file:
+                old_file_contents = file.readlines()
+            new_file_contents = data.to_list()
+
+            diff = diff_files(old_file_contents, new_file_contents)
+            if diff:
+                raise PlaylistVideosRemovedError
+
         write_to_file(title, data, export_path)
+
         # print('Done!')      # Testing Code
     except PlaylistNotFoundError:
-        print('Error! Invalid Playlist Entered.')
-        sys.exit(1)
+        print(f'Error! Invalid Playlist ID: {playlist_id}\nPlaylist must not be Private')
+
+    except PlaylistVideosRemovedError:
+        print('   Warning! Videos Removed Since Last Export:')
+        for vid in diff:
+            print(f"    - {vid}")
+        print()
+
 
 
 # Argparse Options
@@ -132,9 +181,9 @@ def cli_parser():
     parser.add_argument('playlist_name', type=str, nargs='?',
                         help='name of playlist')
 
-    parser.add_argument('-u', '--url', type=str, help='playlist URL')
+    parser.add_argument('-u', '--url', type=str, action='append', help='playlist URL')
 
-    parser.add_argument('-i', '--id', type=str, help='playlist ID')
+    parser.add_argument('-i', '--id', type=str, action='append', help='playlist ID')
 
     parser.add_argument('-a', '--all', action='store_true',
                         help='export all playlists')
@@ -142,12 +191,37 @@ def cli_parser():
     parser.add_argument('-p', '--path', type=str,
                         default=EXPORT_PATH,
                         help='path to save exported playlist')
+    
     return parser
 
 
 def main():
-    args = cli_parser().parse_args()
+    parser = cli_parser()
+    args = parser.parse_args()
+
+    if not os.path.isdir(args.path):
+        print(f"No such directory '{args.path}'\nDefaulting to '{EXPORT_PATH}'\n")
+        args.path = EXPORT_PATH
+
+    if len(sys.argv) < 2:
+        print("No Arguments Found\n")
+        parser.print_help(sys.stdout)
+        return 1
+    
     print("Searching for Playlist(s)")
+
+    if args.playlist_name is not None: 
+        if args.playlist_name == 'bb':
+            saved_playlist = '♪ Banger Beats ♫'
+        elif args.playlist_name == 'ss':
+            saved_playlist = 'Soothing Songs'
+        elif args.playlist_name == 'tt':
+            saved_playlist = 'Techno Tempo'
+        else:
+            print('Error! Invalid Playlist Entered.')
+            return 1
+        export_playlist(SAVED_PLAYLISTS[saved_playlist], saved_playlist, export_path=args.path)
+
     
     # Goes through all the saved frequently used playlists and exports them
     if args.all:
@@ -155,38 +229,16 @@ def main():
             export_playlist(pl_id, pl_title, args.path)
     
     # Removes part of the url to get only the video ID
-    elif args.url:
-        export_playlist(args.url[38:], export_path=args.path)
+    if args.url:
+        for url in args.url:
+            playlist = url[38:]
+            export_playlist(playlist, export_path=args.path)
 
-    elif args.id:
-        export_playlist(args.id, export_path=args.path)
-
-    elif args.playlist_name is not None: 
-        if args.playlist_name == 'bb':
-            export_playlist(SAVED_PLAYLISTS['♪ Banger Beats ♫'], '♪ Banger Beats ♫', export_path=args.path)
-        elif args.playlist_name == 'ss':
-            export_playlist(SAVED_PLAYLISTS['Soothing Songs'], 'Soothing Songs', export_path=args.path)
-        elif args.playlist_name == 'tt':
-            export_playlist(SAVED_PLAYLISTS['Techno Tempo'], 'Techno Tempo', export_path=args.path)
-        else:
-            print('Error! Invalid Playlist Entered.')
-    else:
-        print("No Arguments Found")
+    if args.id:
+        for playlist in args.id:
+            export_playlist(playlist, export_path=args.path)
 
 
-
-# Getting API Token from file
-try:
-    with open(API_KEY_FILE, 'r') as api_file:
-        api_key = api_file.read().strip()
-except FileNotFoundError:
-        print("No API Key file found")
-        exit(1)
-
-youtube = build('youtube', 'v3', developerKey=api_key)
-main()
-
-
-
-
+if __name__ == "__main__":
+    main()
 
