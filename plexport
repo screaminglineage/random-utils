@@ -13,7 +13,7 @@ import argparse
 import difflib
 from googleapiclient.discovery import build
 
-API_KEY = 'AIzaSyAJ0FuPhTk7JptUUsNMmRYgwnu8UbARaDE'
+API_KEY = '' # Add Youtube Data API key here
 EXPORT_PATH = '/mnt/Other-Stuff/Playlist Backup/'
 youtube = build('youtube', 'v3', developerKey=API_KEY)
 
