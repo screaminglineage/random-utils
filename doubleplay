@@ -1,0 +1,34 @@
+#!/bin/bash
+# Play two videos side by side using mpv
+
+# Shows information about this command
+help() {
+    echo "usage: doubleplay [-h] video_1 video_2"
+    echo ""
+    echo "Play two videos side by side using mpv"
+    echo ""
+    echo "positional arguments:"
+    echo "  video_1      video on the left side"
+    echo "  video_2      video on the left side"
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+}
+
+# Shows help and exits if the argument is -h
+if [[ $1 = -h ]] || [[ $1 = --help ]]; then
+    help
+    exit 0
+elif [[ -z $1 ]] || [[ -z $2 ]]; then
+    echo "Error! Not Enough Arguments"
+    exit 1
+fi
+
+left="$1"
+right="$2"
+mpv \
+    --lavfi-complex="[vid1][vid2]hstack[vo];[aid1][aid2]amix[ao]" \
+    "$left" \
+    --external-file="$right"
+
+

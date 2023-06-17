@@ -1,0 +1,115 @@
+#!/usr/bin/python
+
+# Randomizes the cases of the letters in a sentence
+# ironify() maintains an order while case_randomize() is completely random
+
+
+import random
+import argparse
+
+def ironify(sentence, letter1='random'):
+    """Ironifies sentence
+    "This is a sentence" --> "tHiS iS a SeNtEnCe"
+    The first letter can be set to be either
+    'random', 'upper' or 'lower' cases"""
+    
+    newsent = ''
+    space_count = 0
+    if letter1 == 'random':
+        rand = random.randint(0,1)
+    elif letter1 == 'upper':
+        rand = 1
+    elif letter1 == 'lower':
+        rand = 0
+        
+    for index, letter in enumerate(sentence):
+        index += rand
+        if letter == ' ':
+            space_count += 1
+        if (index + space_count) % 2 == 0:
+            newsent += letter.lower()
+        else:
+            newsent += letter.upper()
+    return newsent
+
+
+def case_randomize(sentence):
+    """Randomizes the case of every letter in sentence 
+    """
+    newsent = ''
+   # space_count = 0
+    for letter in sentence:
+        rand = random.randint(0,1)
+        if rand == 0:
+            newsent += letter.upper()
+        else:
+            newsent += letter.lower()
+    return newsent
+
+def cli_parser():
+    parser = argparse.ArgumentParser(
+            description="Ironifies the entered sentence, making it alternate between upper and lower cases. The starting case is chosen at random.`This is a sentence` --> `tHiS iS a SeNtEnCe`. Also has an option to completely randomises the cases of all letters."
+    )
+
+    parser.add_argument(
+            "sentence", type=str, nargs='*',
+            help="ironifies a sentence (unless the `-R` flag is set)"
+    )
+
+    case_rand = parser.add_mutually_exclusive_group()
+    case_rand.add_argument(
+            "-c", "--case-randomize", metavar="SENTENCE",
+            type=str, action="append",
+            help="randomise the case of a sentence instead"
+    )
+    case_rand.add_argument("-R", "--randomize-all", action="store_true",
+            help="randomise the cases of all entered sentences"
+    )
+    
+    parser.add_argument(
+            "-v", "--verbose", action="store_true",
+            help="mention the operation done in the output"
+            )
+
+    return parser
+
+
+def main():
+    args = cli_parser().parse_args()
+    
+    to_ironify = args.sentence
+    to_randomize = args.case_randomize
+    randomize_all = args.randomize_all
+    verbose = args.verbose
+    sep = ""    # separator between the two type of randomizations
+
+    #print(to_randomize)
+    
+    if randomize_all and verbose:
+        print("Case Randomized - ") 
+    elif to_ironify and verbose: 
+        print("Ironified - ")
+
+    if to_ironify:
+        # sets separator to new-line only if ironify is selected
+        # to not add an extra space
+        sep = "\n" 
+        
+        for sent in to_ironify:
+            if randomize_all:
+                res = case_randomize(sent)
+            else:
+                res = ironify(sent)
+            print(res)
+     
+    if to_randomize:
+        if verbose: print(f"{sep}Case Randomized - ")
+        for sent in to_randomize:
+            print(case_randomize(sent))
+
+if __name__ == "__main__":
+    main()
+
+
+
+

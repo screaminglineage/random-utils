@@ -1,0 +1,51 @@
+#!/bin/bash
+# Generates a template C file, opens it in the default editor and deletes it after quitting
+
+
+# Shows information about this command
+help() {
+    echo "usage: genc [file_name]"
+    echo ""
+    echo "Generates a template C file, opens it in the default editor and deletes it after quitting"
+    echo ""
+    echo "positional arguments:"
+    echo "file_name        filename of the C source code (DEFAULT: test.c)" 
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+}
+
+
+# Shows help and exits if the argument is -h
+if [[ $1 = -h ]] || [[ $1 = --help ]]; then
+    help
+    exit 0
+fi
+
+# Sets default filename if none given
+[[ "$1" ]] && filename="$1" || filename="test.c"
+
+# Exits if file already exists
+if [[ -e "$filename" ]]; then
+    echo "File Already Exists!"
+    exit 1
+fi
+
+# Generates template and opens the file
+echo "#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+
+
+    putchar('\\n');
+    return 0;
+}" >> "$filename"
+
+$EDITOR "$filename"
+executable="$(basename --suffix='.c' "$filename")"
+
+# Deletes the executable file and moves the 
+# C file into /tmp after quitting
+[[ -e $executable ]] && rm "$executable"
+[[ -e $filename ]] && mv "$filename" /tmp/"$filename"

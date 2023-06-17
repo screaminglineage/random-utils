@@ -1,0 +1,43 @@
+#!/bin/bash
+# Pastes a file into the currently selected Telegram chat
+# Requires the clipboard program - https://github.com/Slackadays/Clipboard
+
+
+# Shows information about this command
+help() {
+    echo "usage: tg-paste [filepath] "
+    echo ""
+    echo "Pastes a file into the currently selected Telegram chat"
+    echo ""
+    echo "positional arguments:"
+    echo "  filepath       file to paste into the chat (DEFAULT: takes value with an input prompt if not given)"
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+}
+
+
+# Shows help and exits if the argument is -h
+if [[ $1 = -h ]] || [[ $1 = --help ]]; then
+    help
+    exit 0
+fi
+
+
+WINDOW_CLASS="telegramdesktop"
+
+[[ $1 ]] \
+    && input_file="$1" \
+    || read -rp "Enter path to copy: " input_file
+
+window_id="$(xdotool search --onlyvisible --class $WINDOW_CLASS)"
+# mimetype="$(file --mime-type "$input_file" | cut -d' ' -f2)"
+
+if [[ -z $window_id ]]; then 
+    echo "Application: '$WINDOW_CLASS' Not Open or Incorrect"
+    exit
+fi
+
+# xclip -selection clipboard -target "$mimetype" "$input_file"
+cb --no-progress copy "$input_file"
+xdotool key --window "$window_id" "ctrl+v"
