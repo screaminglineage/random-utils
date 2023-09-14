@@ -1,0 +1,73 @@
+#!/bin/bash
+#Download Images from Unsplash.com
+
+USER_AGENT="Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0"
+SITE_BASE_URL="https://unsplash.com/"
+SITE_TOPICS_URL="https://unsplash.com/t/"
+TEMP_FILE="links.txt"
+
+# Shows information about this command
+help() {
+    echo "usage: unsplash-download [-h] "
+    echo ""
+    echo "Download Images from Unsplash.com"
+    echo ""
+    echo "options:"
+    echo "  -h, --help  show this help message and exit"
+}
+
+
+# Shows help and exits if the argument is -h
+if [[ $1 = -h ]] || [[ $1 = --help ]]; then
+    help
+    exit 0
+fi
+
+# Grabbing Topics Information
+echo "Getting Website Info..."
+TOPICS_DATA=$(wget --quiet --user-agent="$USER_AGENT" "$SITE_TOPICS_URL" -O -)
+
+IFS=$'\n' topic_names=( $(pup 'div[class=VCR4P] a json{}' <<< "$TOPICS_DATA" | \
+    jq -r '.[].text' | \
+    sed 's/&amp;/\&/g'
+) )
+
+IFS=$'\n' topic_links=( $(pup 'div[class=VCR4P] a attr{href}' <<< "$TOPICS_DATA") )
+
+# Listing out Topics
+i=1
+echo "Topics -"
+for name in "${topic_names[@]}"; do
+    printf "[%s] %s\n" "$i" "$name"
+    (( i++ ))
+done
+
+read -rp "Choose Topic: " index
+(( index <= "${#topic_names[@]}" )) && \
+    choice="${topic_links[index-1]}" || \
+    choice="${topic_links[0]}"
+topic_url="$SITE_BASE_URL/$choice"
+
+read -rp "Enter No. of Pictures to Download (Default: MAX): " download_count
+read -rp "Enter Download Directory (Default: current): " download_dir
+[[ -z "$download_dir" ]] && download_dir=.
+
+# Downloading Topic URL
+echo "Preparing to Download..."
+DATA=$(wget --quiet --user-agent="$USER_AGENT" "$topic_url" -O -)
+
+pup 'img[srcset] attr{src}' <<< "$DATA" | \
+    cut -d'?' -f1 | \
+    sort | \
+    uniq | \
+    rg -v 'plus.unsplash.com' > "$TEMP_FILE"
+
+[[ -z "$download_count" ]] || sed -i "${download_count}"q "$TEMP_FILE"
+
+# Downloading Images
+echo "Downloading Image(s)..."
+wget --quiet --user-agent="$USER_AGENT" --directory-prefix="$download_dir" --input-file="$TEMP_FILE" 
+rm "$TEMP_FILE"
+
+echo "Done!"
+
